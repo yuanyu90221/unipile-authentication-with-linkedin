@@ -67,11 +67,11 @@ go install github.com/pressly/goose/v3/cmd/goose@latest
 
 ## 後端 api 分析
 
-![backend-api-analysis](backend-api-analysis.png)
+![backend-api-analysis](backend-api-analysis-v1.png)
 
 ## 前端頁面分析
 
-![frontend-page-analysis](frontend-page-analysis.png)
+![frontend-page-analysis](frontend-page-analysis-v1.png)
 
 ## TODO
 
