@@ -21,4 +21,4 @@ jobs:
       - name: Setup dependency
         run: go mod tidy
       - name: Test
-        run: make test
+        run: go test -v ./internal/...
