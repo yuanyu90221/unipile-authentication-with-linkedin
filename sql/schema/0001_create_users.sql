@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS users (
   id BIGSERIAL PRIMARY KEY,
   account VARCHAR(100) UNIQUE NOT NULL,
   hashed_password VARCHAR(400) NOT NULL,
-  refresh_token VARCHAR(400) NOT NULL,
+  refresh_token VARCHAR(400),
   created_at TIMESTAMP NOT NULL DEFAULT now(),
   updated_at TIMESTAMP NOT NULL DEFAULT now()
 );
