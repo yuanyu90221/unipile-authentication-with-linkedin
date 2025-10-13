@@ -53,7 +53,11 @@ func (h *Handler) CreateUser(ctx *gin.Context) {
 	createUserParam := CreateUserParam{Account: request.Account, HashedPassword: hashedPassword}
 	createdUser, err := h.userStore.CreateUser(ctx, createUserParam)
 	if err != nil {
-		util.WriteError(ctx, ctx.Writer, http.StatusInternalServerError, err)
+		if errors.Is(err, ErrorForDuplicateKey) {
+			util.WriteError(ctx, ctx.Writer, http.StatusConflict, errors.New("user resource conflict"))
+		} else {
+			util.WriteError(ctx, ctx.Writer, http.StatusInternalServerError, err)
+		}
 		return
 	}
 	util.FailOnError(

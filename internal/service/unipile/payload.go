@@ -19,3 +19,7 @@ type CookiePayload struct {
 type CookieParam struct {
 	AccessToken string `json:"access_token"`
 }
+
+type ListFederaParam struct {
+	UserID int64 `json:"user_id"`
+}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -29,6 +30,7 @@ func NewHandler(
 func (h *Handler) RegisterRoute(router *gin.RouterGroup) {
 	router.POST("/credential", h.ConnectUserWithCredential)
 	router.POST("/cookie", h.ConnectUserWithCookie)
+	router.GET("/:user_id", h.ListFederaByUserID)
 }
 
 // ConnectUserWithCredential -  linked user with linkedin credential handler
@@ -78,7 +80,7 @@ func (h *Handler) ConnectUserWithCredential(ctx *gin.Context) {
 	)
 }
 
-// ConnectUserWithCookie - TODO: add linked handler
+// ConnectUserWithCookie - linked user with linkedin cookie handler
 func (h *Handler) ConnectUserWithCookie(ctx *gin.Context) {
 	var request ConnectUserWithCookieRequest
 	if err := util.ParseJSON(ctx.Request, &request); err != nil {
@@ -120,6 +122,36 @@ func (h *Handler) ConnectUserWithCookie(ctx *gin.Context) {
 	util.FailOnError(
 		util.WriteJSON(ctx.Writer, http.StatusCreated, linkedResult),
 		"failed to linked user with unipile cookie",
+		logger.FromContext(ctx),
+	)
+}
+
+func (h *Handler) ListFederaByUserID(ctx *gin.Context) {
+	userIDstr := ctx.Param("user_id")
+	if userIDstr == "" {
+		util.WriteError(ctx, ctx.Writer, http.StatusBadRequest,
+			fmt.Errorf("user_id not provided"),
+		)
+		return
+	}
+	userID, err := strconv.ParseInt(userIDstr, 10, 64)
+	if err != nil {
+		util.WriteError(ctx, ctx.Writer, http.StatusInternalServerError,
+			fmt.Errorf("user_id parse error"),
+		)
+		return
+	}
+	result, err := h.unipileStore.ListUnipileUserFederalByUserID(ctx, ListFederaParam{
+		UserID: userID,
+	})
+	if err != nil {
+		util.WriteError(ctx, ctx.Writer, http.StatusInternalServerError, err)
+		return
+	}
+
+	util.FailOnError(
+		util.WriteJSON(ctx.Writer, http.StatusOK, result),
+		fmt.Sprintf("failed to list federal with user id :%v", userID),
 		logger.FromContext(ctx),
 	)
 }
