@@ -11,9 +11,11 @@ import (
 
 // Config - App config.
 type Config struct {
-	Port    string `mapstructure:"PORT"`
-	GinMode string `mapstructure:"GIN_MODE"`
-	DBURL   string `mapstructure:"DB_URL"`
+	Port               string `mapstructure:"PORT"`
+	GinMode            string `mapstructure:"GIN_MODE"`
+	DBURL              string `mapstructure:"DB_URL"`
+	UnipileBaseURL     string `mapstructure:"UNIPILE_BASE_URL"`
+	UnipileAccessToken string `mapstructure:"UNIPILE_ACCESS_TOKEN"`
 }
 
 // AppConfig - global config.
@@ -30,6 +32,8 @@ func Init(ctx context.Context) {
 	failOnError(v.BindEnv("PORT"), "Failed on Bind PORT", log)
 	failOnError(v.BindEnv("GIN_MODE"), "Failed on Bind GIN_MODE", log)
 	failOnError(v.BindEnv("DB_URL"), "Failed on Bind GIN_MODE", log)
+	failOnError(v.BindEnv("UNIPILE_BASE_URL"), "Failed on Bind UNIPILE_BASE_URL", log)
+	failOnError(v.BindEnv("UNIPILE_ACCESS_TOKEN"), "Failed on Bind UNIPILE_ACCESS_TOKEN", log)
 	err := v.ReadInConfig()
 	if err != nil {
 		log.WarnContext(ctx, "Load from environment variable")

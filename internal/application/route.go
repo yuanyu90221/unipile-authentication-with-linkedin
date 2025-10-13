@@ -8,8 +8,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/yuanyu90221/uniplile-authentication-with-linkedin/internal/logger"
+	"github.com/yuanyu90221/uniplile-authentication-with-linkedin/internal/service/unipile"
 	"github.com/yuanyu90221/uniplile-authentication-with-linkedin/internal/service/user"
 	"github.com/yuanyu90221/uniplile-authentication-with-linkedin/pkg/password"
+	"github.com/yuanyu90221/uniplile-authentication-with-linkedin/pkg/request"
 )
 
 // SetupRoutes - define route.
@@ -24,6 +26,7 @@ func (app *App) SetupRoutes(ctx context.Context) {
 	})
 	app.Router = router
 	app.loadUserRoutes()
+	app.loadUnipileRoutes()
 }
 
 func (app *App) loadUserRoutes() {
@@ -34,4 +37,15 @@ func (app *App) loadUserRoutes() {
 		password.NewPasswordHandler(),
 	)
 	usersHandler.RegisterRoute(usersGroup)
+}
+
+func (app *App) loadUnipileRoutes() {
+	unipileGroup := app.Router.Group("/unipile")
+	unipileStore := unipile.NewUnipileStore(app.db)
+	linkedInHandler := unipile.NewLinkedinHandler(
+		request.NewRequestHandler(),
+		app.cfg,
+	)
+	unipileHandler := unipile.NewHandler(unipileStore, linkedInHandler)
+	unipileHandler.RegisterRoute(unipileGroup)
 }

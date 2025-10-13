@@ -11,7 +11,7 @@ fetch_user_with_credential() {
   local password=$2
   local domain=$3
   local token=$4
-  `curl --request POST --url "$domain/api/v1/accounts" --header "X-API-KEY:$token" --header 'accept: application/json' --header 'content-type: application/json'  --data "{\"provider\": \"LINKEDIN\", \"username\": \"$username\", \"password\": \"$password\"}" | jq >> unipile/sample_response/login_response.json`
+  `curl --request POST --url "$domain/api/v1/accounts" --header "X-API-KEY:$token" --header 'accept: application/json' --header 'content-type: application/json'  --data "{\"provider\": \"LINKEDIN\", \"username\": \"$username\", \"password\": \"$password\"}" | jq >> unipile/sample_response/login_response_v1.json`
 }
 
 fetch_checkout_otp() {
