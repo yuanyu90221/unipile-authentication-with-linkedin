@@ -8,8 +8,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/yuanyu90221/uniplile-authentication-with-linkedin/internal/logger"
+	"github.com/yuanyu90221/uniplile-authentication-with-linkedin/internal/service/auth"
 	"github.com/yuanyu90221/uniplile-authentication-with-linkedin/internal/service/unipile"
 	"github.com/yuanyu90221/uniplile-authentication-with-linkedin/internal/service/user"
+	"github.com/yuanyu90221/uniplile-authentication-with-linkedin/pkg/jwt"
 	"github.com/yuanyu90221/uniplile-authentication-with-linkedin/pkg/password"
 	"github.com/yuanyu90221/uniplile-authentication-with-linkedin/pkg/request"
 )
@@ -25,27 +27,37 @@ func (app *App) SetupRoutes(ctx context.Context) {
 		ctx.JSON(http.StatusOK, map[string]string{"message": "ok"})
 	})
 	app.Router = router
-	app.loadUserRoutes()
-	app.loadUnipileRoutes()
+	jwtHandler := jwt.NewJwtHandler()
+	authHandler := auth.NewHandler(jwtHandler, app.cfg)
+	app.loadUserRoutes(authHandler, jwtHandler)
+	app.loadUnipileRoutes(authHandler)
 }
 
-func (app *App) loadUserRoutes() {
+func (app *App) loadUserRoutes(authHandler *auth.Handler,
+	jwtHandler jwt.JwtHandler,
+) {
 	usersGroup := app.Router.Group("/users")
 	userStore := user.NewUserStore(app.db)
 	usersHandler := user.NewHandler(
 		userStore,
 		password.NewPasswordHandler(),
+		authHandler,
+		jwtHandler,
+		app.cfg,
 	)
 	usersHandler.RegisterRoute(usersGroup)
 }
 
-func (app *App) loadUnipileRoutes() {
+func (app *App) loadUnipileRoutes(authHandler *auth.Handler) {
 	unipileGroup := app.Router.Group("/unipile")
 	unipileStore := unipile.NewUnipileStore(app.db)
 	linkedInHandler := unipile.NewLinkedinHandler(
 		request.NewRequestHandler(),
 		app.cfg,
 	)
-	unipileHandler := unipile.NewHandler(unipileStore, linkedInHandler)
+	unipileHandler := unipile.NewHandler(
+		unipileStore,
+		linkedInHandler,
+		authHandler)
 	unipileHandler.RegisterRoute(unipileGroup)
 }

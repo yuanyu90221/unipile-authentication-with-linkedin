@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
 COMMENT ON COLUMN users.account IS 'user account for login';
 COMMENT ON COLUMN users.hashed_password IS 'hashed password for login';
 COMMENT ON COLUMN users.refresh_token IS 'refresh token for login session';
-
+CREATE INDEX IF NOT EXISTS account ON users (account);
 -- +goose Down
+DROP INDEX IF EXISTS account CASCADE;
 DROP TABLE IF EXISTS users CASCADE;

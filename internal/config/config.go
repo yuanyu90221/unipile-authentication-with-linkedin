@@ -16,6 +16,7 @@ type Config struct {
 	DBURL              string `mapstructure:"DB_URL"`
 	UnipileBaseURL     string `mapstructure:"UNIPILE_BASE_URL"`
 	UnipileAccessToken string `mapstructure:"UNIPILE_ACCESS_TOKEN"`
+	JWTSecret          string `mapstructure:"JWT_SECRET"`
 }
 
 // AppConfig - global config.
@@ -34,6 +35,7 @@ func Init(ctx context.Context) {
 	failOnError(v.BindEnv("DB_URL"), "Failed on Bind GIN_MODE", log)
 	failOnError(v.BindEnv("UNIPILE_BASE_URL"), "Failed on Bind UNIPILE_BASE_URL", log)
 	failOnError(v.BindEnv("UNIPILE_ACCESS_TOKEN"), "Failed on Bind UNIPILE_ACCESS_TOKEN", log)
+	failOnError(v.BindEnv("JWT_SECRET"), "Failed on Bind JWT_SECRET", log)
 	err := v.ReadInConfig()
 	if err != nil {
 		log.WarnContext(ctx, "Load from environment variable")

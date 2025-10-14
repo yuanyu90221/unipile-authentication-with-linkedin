@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/lib/pq"
 	"github.com/yuanyu90221/uniplile-authentication-with-linkedin/internal/logger"
 )
@@ -49,6 +50,63 @@ func (s UserStore) CreateUser(ctx context.Context, createUserParam CreateUserPar
 			} else {
 				log.Error(fmt.Sprintf("PostgreSQL error: %s", err))
 			}
+		}
+		return UserEntity{}, fmt.Errorf("failed to insert users: %w", err)
+	}
+	return ConvertToUserEntity(resultUser), nil
+}
+
+func (s UserStore) FindByAccount(ctx context.Context, account string) (UserEntity, error) {
+	// original sql
+	queryBuilder := sq.Select("id", "account", "hashed_password", "refresh_token", "created_at", "updated_at").
+		From("users").PlaceholderFormat(sq.Dollar)
+	queryBuilder = queryBuilder.Where(sq.Eq{"account": account})
+	query, args, err := queryBuilder.ToSql()
+	if err != nil {
+		return UserEntity{}, fmt.Errorf("failed to use query builder: %w", err)
+	}
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return UserEntity{}, fmt.Errorf("failed to query user by account")
+	}
+	var resultUser User
+	// 取第一個
+	rows.Next()
+	rows.Scan(
+		&resultUser.ID,
+		&resultUser.Account,
+		&resultUser.HashedPassword,
+		&resultUser.RefreshToken,
+		&resultUser.CreatedAt,
+		&resultUser.UpdatedAt,
+	)
+	return ConvertToUserEntity(resultUser), nil
+}
+
+func (s UserStore) UpdateRefreshToken(ctx context.Context, refreshToken string, userID int64) (UserEntity, error) {
+	queryBuilder, err :=
+		s.db.Prepare(`
+		UPDATE users 
+		SET refresh_token=$1
+		WHERE id=$2  
+		RETURNING *;`)
+	if err != nil {
+		return UserEntity{}, fmt.Errorf("prepare statement users: %w", err)
+	}
+	defer queryBuilder.Close()
+	var resultUser User
+	err = queryBuilder.QueryRowContext(ctx, refreshToken, userID).Scan(
+		&resultUser.ID,
+		&resultUser.Account,
+		&resultUser.HashedPassword,
+		&resultUser.RefreshToken,
+		&resultUser.CreatedAt,
+		&resultUser.UpdatedAt,
+	)
+	log := logger.FromContext(ctx)
+	if err != nil {
+		if pgErr, ok := err.(*pq.Error); ok {
+			log.Error(fmt.Sprintf("PostgreSQL error: %s", pgErr.Detail))
 		}
 		return UserEntity{}, fmt.Errorf("failed to insert users: %w", err)
 	}

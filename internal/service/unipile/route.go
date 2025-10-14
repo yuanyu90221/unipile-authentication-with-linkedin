@@ -4,37 +4,48 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/yuanyu90221/uniplile-authentication-with-linkedin/internal/logger"
+	"github.com/yuanyu90221/uniplile-authentication-with-linkedin/internal/service/auth"
 	"github.com/yuanyu90221/uniplile-authentication-with-linkedin/internal/util"
 )
 
 type Handler struct {
 	unipileStore    *UnipileStore
 	linkedinHandler *LinkedinHandler
+	authHandler     *auth.Handler
 }
 
 func NewHandler(
 	unipileStore *UnipileStore,
 	linkedinHandler *LinkedinHandler,
+	authHandler *auth.Handler,
 ) *Handler {
 	return &Handler{
 		unipileStore:    unipileStore,
 		linkedinHandler: linkedinHandler,
+		authHandler:     authHandler,
 	}
 }
 
 func (h *Handler) RegisterRoute(router *gin.RouterGroup) {
+	router.Use(h.authHandler.JwtAuthMiddleware())
 	router.POST("/credential", h.ConnectUserWithCredential)
 	router.POST("/cookie", h.ConnectUserWithCookie)
-	router.GET("/:user_id", h.ListFederaByUserID)
+	router.GET("/", h.ListFederaByUserID)
 }
 
 // ConnectUserWithCredential -  linked user with linkedin credential handler
 func (h *Handler) ConnectUserWithCredential(ctx *gin.Context) {
+	userID, err := auth.ExtractUserID(ctx)
+	if err != nil {
+		util.WriteError(ctx, ctx.Writer, http.StatusBadRequest,
+			err,
+		)
+		return
+	}
 	var request ConnectUserWithCredentialRequest
 	if err := util.ParseJSON(ctx.Request, &request); err != nil {
 		util.WriteError(ctx, ctx.Writer, http.StatusBadRequest, err)
@@ -65,7 +76,7 @@ func (h *Handler) ConnectUserWithCredential(ctx *gin.Context) {
 	param := CreateUnipileUserFederaParam{
 		AccountID: connectResult.AccountID,
 		Provider:  "LINKEDIN",
-		UserID:    request.UserID,
+		UserID:    userID,
 		Status:    status,
 	}
 	linkedResult, err := h.unipileStore.CreateUnipileUserFederal(ctx, param)
@@ -82,6 +93,13 @@ func (h *Handler) ConnectUserWithCredential(ctx *gin.Context) {
 
 // ConnectUserWithCookie - linked user with linkedin cookie handler
 func (h *Handler) ConnectUserWithCookie(ctx *gin.Context) {
+	userID, err := auth.ExtractUserID(ctx)
+	if err != nil {
+		util.WriteError(ctx, ctx.Writer, http.StatusBadRequest,
+			err,
+		)
+		return
+	}
 	var request ConnectUserWithCookieRequest
 	if err := util.ParseJSON(ctx.Request, &request); err != nil {
 		util.WriteError(ctx, ctx.Writer, http.StatusBadRequest, err)
@@ -111,7 +129,7 @@ func (h *Handler) ConnectUserWithCookie(ctx *gin.Context) {
 	param := CreateUnipileUserFederaParam{
 		AccountID: connectResult.AccountID,
 		Provider:  "LINKEDIN",
-		UserID:    request.UserID,
+		UserID:    userID,
 		Status:    status,
 	}
 	linkedResult, err := h.unipileStore.CreateUnipileUserFederal(ctx, param)
@@ -127,17 +145,10 @@ func (h *Handler) ConnectUserWithCookie(ctx *gin.Context) {
 }
 
 func (h *Handler) ListFederaByUserID(ctx *gin.Context) {
-	userIDstr := ctx.Param("user_id")
-	if userIDstr == "" {
-		util.WriteError(ctx, ctx.Writer, http.StatusBadRequest,
-			fmt.Errorf("user_id not provided"),
-		)
-		return
-	}
-	userID, err := strconv.ParseInt(userIDstr, 10, 64)
+	userID, err := auth.ExtractUserID(ctx)
 	if err != nil {
-		util.WriteError(ctx, ctx.Writer, http.StatusInternalServerError,
-			fmt.Errorf("user_id parse error"),
+		util.WriteError(ctx, ctx.Writer, http.StatusBadRequest,
+			err,
 		)
 		return
 	}

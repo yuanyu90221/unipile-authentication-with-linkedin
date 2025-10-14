@@ -5,3 +5,9 @@ type CreateUserRequest struct {
 	Account  string `json:"account" validate:"required"`
 	Password string `json:"password" validate:"required"`
 }
+
+// LoginRequest
+type LoginRequest struct {
+	Account  string `json:"account" validate:"required"`
+	Password string `json:"password" validate:"required"`
+}
