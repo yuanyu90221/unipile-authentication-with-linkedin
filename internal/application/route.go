@@ -2,8 +2,10 @@ package application
 
 import (
 	"context"
+	"embed"
 	"net/http"
 
+	"github.com/gin-contrib/static"
 	sloggin "github.com/samber/slog-gin"
 
 	"github.com/gin-gonic/gin"
@@ -16,15 +18,27 @@ import (
 	"github.com/yuanyu90221/uniplile-authentication-with-linkedin/pkg/request"
 )
 
+var ServerFs embed.FS
+
 // SetupRoutes - define route.
 func (app *App) SetupRoutes(ctx context.Context) {
 	gin.SetMode(app.cfg.GinMode)
 	router := gin.New()
+
 	// recovery middleward
 	router.Use(sloggin.New(logger.FromContext(ctx)))
 	router.Use(gin.Recovery())
-	router.GET("/", func(ctx *gin.Context) {
-		ctx.JSON(http.StatusOK, map[string]string{"message": "ok"})
+
+	// setup static
+	fs, err := static.EmbedFolder(ServerFs, "static")
+	if err != nil {
+		panic(err)
+	}
+	router.Use(static.Serve("/", fs))
+
+	// for history mode
+	router.NoRoute(func(c *gin.Context) {
+		c.HTML(http.StatusOK, "index.html", nil)
 	})
 	app.Router = router
 	jwtHandler := jwt.NewJwtHandler()

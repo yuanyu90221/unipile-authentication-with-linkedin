@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -12,7 +13,11 @@ import (
 	mlog "github.com/yuanyu90221/uniplile-authentication-with-linkedin/internal/logger"
 )
 
+//go:embed static/*
+var serverFs embed.FS
+
 func main() {
+	application.ServerFs = serverFs
 	logger := slog.New(slog.NewJSONHandler(
 		os.Stdout, &slog.HandlerOptions{
 			AddSource: true,

@@ -2,7 +2,7 @@
 include .env
 export $(shell sed 's/=.*//' .env)
 build:
-	@CGO_ENABLED=0 GOOS=linux go build -o bin/main cmd/main.go
+	@CGO_ENABLED=0 GOOS=linux go build -o bin/main main.go
 
 run: build
 	@./bin/main
