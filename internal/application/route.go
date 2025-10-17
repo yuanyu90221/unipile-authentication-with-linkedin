@@ -38,7 +38,8 @@ func (app *App) SetupRoutes(ctx context.Context) {
 
 	// for history mode
 	router.NoRoute(func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", nil)
+		// c.HTML(http.StatusOK, "index.html", nil)
+		c.Redirect(http.StatusMovedPermanently, "/")
 	})
 	app.Router = router
 	jwtHandler := jwt.NewJwtHandler()
