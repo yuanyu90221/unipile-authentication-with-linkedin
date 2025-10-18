@@ -41,8 +41,10 @@ func NewHandler(
 }
 
 func (h *Handler) RegisterRoute(router *gin.RouterGroup) {
-	router.POST("/", h.CreateUser)
+	router.POST("/register", h.CreateUser)
 	router.POST("/login", h.Login)
+	router.POST("/auth", h.authHandler.JwtAuthMiddleware(), h.Auth)
+	router.POST("/refresh", h.authHandler.JwtAuthMiddleware(), h.Refresh)
 }
 
 func (h *Handler) CreateUser(ctx *gin.Context) {
@@ -74,7 +76,9 @@ func (h *Handler) CreateUser(ctx *gin.Context) {
 		return
 	}
 	util.FailOnError(
-		util.WriteJSON(ctx.Writer, http.StatusCreated, createdUser),
+		util.WriteJSON(ctx.Writer, http.StatusCreated, gin.H{
+			"message": fmt.Sprintf("account %s created successfully", createdUser.Account),
+		}),
 		"failed to create user",
 		logger.FromContext(ctx),
 	)
@@ -121,9 +125,73 @@ func (h *Handler) Login(ctx *gin.Context) {
 
 	ctx.Header("accessToken", tokens.AccessToken)
 	ctx.Header("refreshToken", tokens.RefreshToken)
+	// ctx.SetCookie("accessToken", tokens.AccessToken, 3600, "/")
+	ctx.JSON(http.StatusCreated, gin.H{
+		"access_token":  tokens.AccessToken,
+		"refresh_token": tokens.RefreshToken,
+		"account":       user.Account,
+	})
+}
+
+func (h *Handler) Auth(ctx *gin.Context) {
+	userID, err := auth.ExtractUserID(ctx)
+	if err != nil {
+		util.WriteError(ctx, ctx.Writer, http.StatusBadRequest,
+			err,
+		)
+		return
+	}
+	// find user by userID
+	user, err := h.userStore.FindByUserID(ctx, userID)
+	if err != nil {
+		util.WriteError(ctx, ctx.Writer, http.StatusInternalServerError, fmt.Errorf("failed to find user %w", err))
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"account": user.Account,
+	})
+}
+
+func (h *Handler) Refresh(ctx *gin.Context) {
+	userID, err := auth.ExtractUserID(ctx)
+	if err != nil {
+		util.WriteError(ctx, ctx.Writer, http.StatusBadRequest,
+			err,
+		)
+		return
+	}
+	// find user by userID
+	user, err := h.userStore.FindByUserID(ctx, userID)
+	if err != nil {
+		util.WriteError(ctx, ctx.Writer, http.StatusInternalServerError, fmt.Errorf("failed to find user %w", err))
+		return
+	}
+	token := auth.ExtractToken(ctx)
+	if *user.RefreshToken != token {
+		util.WriteError(ctx, ctx.Writer, http.StatusUnauthorized, fmt.Errorf("fresh token not matched"))
+		return
+	}
+	// gen access token, refresh token
+	tokens, err := h.genTokens(user)
+	if err != nil {
+		util.WriteError(ctx, ctx.Writer, http.StatusInternalServerError, err)
+		return
+	}
+
+	// store refresh token
+	_, err = h.userStore.UpdateRefreshToken(ctx, tokens.RefreshToken, user.ID)
+	if err != nil {
+		util.WriteError(ctx, ctx.Writer, http.StatusInternalServerError, err)
+		return
+	}
+
+	ctx.Header("accessToken", tokens.AccessToken)
+	ctx.Header("refreshToken", tokens.RefreshToken)
+	// ctx.SetCookie("accessToken", tokens.AccessToken, 3600, "/")
 	ctx.JSON(http.StatusOK, gin.H{
 		"access_token":  tokens.AccessToken,
 		"refresh_token": tokens.RefreshToken,
+		"account":       user.Account,
 	})
 }
 

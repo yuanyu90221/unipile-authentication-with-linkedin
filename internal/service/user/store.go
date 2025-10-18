@@ -83,6 +83,33 @@ func (s UserStore) FindByAccount(ctx context.Context, account string) (UserEntit
 	return ConvertToUserEntity(resultUser), nil
 }
 
+func (s UserStore) FindByUserID(ctx context.Context, userID int64) (UserEntity, error) {
+	// original sql
+	queryBuilder := sq.Select("id", "account", "hashed_password", "refresh_token", "created_at", "updated_at").
+		From("users").PlaceholderFormat(sq.Dollar)
+	queryBuilder = queryBuilder.Where(sq.Eq{"id": userID})
+	query, args, err := queryBuilder.ToSql()
+	if err != nil {
+		return UserEntity{}, fmt.Errorf("failed to use query builder: %w", err)
+	}
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return UserEntity{}, fmt.Errorf("failed to query user by account")
+	}
+	var resultUser User
+	// 取第一個
+	rows.Next()
+	rows.Scan(
+		&resultUser.ID,
+		&resultUser.Account,
+		&resultUser.HashedPassword,
+		&resultUser.RefreshToken,
+		&resultUser.CreatedAt,
+		&resultUser.UpdatedAt,
+	)
+	return ConvertToUserEntity(resultUser), nil
+}
+
 func (s UserStore) UpdateRefreshToken(ctx context.Context, refreshToken string, userID int64) (UserEntity, error) {
 	queryBuilder, err :=
 		s.db.Prepare(`
